@@ -12,7 +12,6 @@ typedef enum {
     READY,
     RUNNING,
     BLOCKED,
-    FINISHED
 } ProcessState;
 
 typedef struct PCB{
