@@ -1,0 +1,111 @@
+#include "headers.h"
+#include "DS/linked_list.h"
+#include "DS/queue.h"
+
+typedef struct processData
+{
+    int arrivaltime;
+    int priority;
+    int runningtime;
+    int id;
+    int dependencyId;
+} processData;
+
+typedef struct msgbuff
+{
+    long mtype;
+    processData process;   //TODO re-check data type received from generator
+} msgbuff;
+
+typedef struct {
+    int totalProcesses;
+    int totalWaitingTime;
+    int totalTurnaroundTime;
+    int totalExecutionTime;
+} SchedulerStats;
+
+
+
+void fork_process(PCB* pcb) {
+    pid_t pid = fork();
+    
+    if (pid == 0) {
+        // Child process - exec the process program
+        char runtime_str[10];
+        sprintf(runtime_str, "%d", pcb->remainingtime);
+        execl("./process.out", "process.out", runtime_str, NULL);
+        exit(0);
+    } else if (pid > 0) {
+        pcb->pid = pid;
+        if (pcb->starttime == -1) {
+            pcb->starttime = getClk();
+        }
+    } else {
+        perror("Fork failed");
+    }
+}
+
+PCB* add_new_process(LinkedList* processList, SchedulerStats* stats, msgbuff message){
+    // Add process to processList
+    PCB* pcb = pcb_create(message.process.id, message.process.arrivaltime, message.process.runningtime, message.process.priority, message.process.dependencyId);
+    list_add_front(processList, pcb);
+
+    // check dependencies
+    int isDependent = 0;
+    if(pcb->dependencyId != -1){
+        PCB* dependencyPCB = list_find(processList, pcb->dependencyId);
+        if(dependencyPCB){
+            // add to dependency's dependents queue
+            pcb->state=BLOCKED;
+            queue_enqueue(dependencyPCB->dependents, pcb);
+            isDependent=1;
+        }
+    }
+
+    stats->totalProcesses++;
+
+    return pcb;
+}
+
+void start_continue_process(PCB* currentProcess){
+    currentProcess->state = RUNNING;
+    if(currentProcess->starttime == -1){
+        currentProcess->starttime = getClk();
+        currentProcess->waitingtime = currentProcess->starttime-currentProcess->arrivaltime;
+        fork_process(currentProcess);
+    }else{
+        currentProcess->waitingtime = getClk()-currentProcess->lastActive;
+        kill(currentProcess->pid, SIGCONT);
+    }
+}
+
+void preempt_process(PCB* currentProcess, int currentTime){
+    kill(currentProcess->pid, SIGSTOP);
+    currentProcess->state = READY;
+    currentProcess->remainingtime -= (currentTime - currentProcess->lastActive);
+    currentProcess->lastActive = currentTime;
+}
+
+Queue* end_process(LinkedList* processList, PCB** currentProcess, SchedulerStats* stats, msgbuff message){
+    PCB* finishedPCB = list_find(processList, message.process.id);
+    if (!finishedPCB)
+        return queue_create();
+    
+    Queue* dependents = queue_copy(finishedPCB->dependents);
+    
+    // remove finished process from processList
+    list_remove(processList, finishedPCB);
+
+    finishedPCB->finishtime = getClk();
+    finishedPCB->turnaround = finishedPCB->finishtime - finishedPCB->arrivaltime;
+    finishedPCB->wturnaround = (float)finishedPCB->turnaround / finishedPCB->executiontime;
+    stats->totalWaitingTime += finishedPCB->waitingtime;
+    stats->totalTurnaroundTime += finishedPCB->turnaround;
+    stats->totalExecutionTime += finishedPCB->executiontime;
+
+    if(*currentProcess == finishedPCB)
+        *currentProcess = NULL;
+    
+
+    return dependents;
+}

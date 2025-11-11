@@ -52,6 +52,16 @@ void queue_dequeue(Queue* q) {
     q->size--;
 }
 
+Queue* queue_copy(Queue* original) {
+    Queue* newQueue = queue_create();
+    QueueNode* curr = original->Head;
+    while (curr) {
+        queue_enqueue(newQueue, curr->pcb);
+        curr = curr->next;
+    }
+    return newQueue;
+}
+
 void queue_clear(Queue* q) {
     while (q->size) {
         queue_dequeue(q);

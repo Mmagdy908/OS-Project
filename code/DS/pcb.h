@@ -12,7 +12,6 @@ typedef enum {
     READY,
     RUNNING,
     BLOCKED,
-    FINISHED
 } ProcessState;
 
 typedef struct PCB{
@@ -25,6 +24,7 @@ typedef struct PCB{
     int priority;           // 0-10, lower is higher priority
     ProcessState state;             
     int starttime;          // first time process ran (-1 if never started)
+    int lastActive;        // last time process was active
     int finishtime;
     float turnaround;       // finishtime - arrivaltime
     float wturnaround;      // turnaround / executiontime
@@ -43,6 +43,7 @@ PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId
     pcb->priority = priority;
     pcb->state = READY;  // starts in ready/waiting state
     pcb->starttime = -1;
+    pcb->lastActive = -1; 
     pcb->finishtime = -1;
     pcb->turnaround = 0;
     pcb->wturnaround = 0;
