@@ -46,15 +46,16 @@ int main(int argc, char * argv[])
             break;
     }
 
+    // output scheduler.perf
+    FILE* perf_file = open_file("scheduler.perf", 0);
+    add_performance(perf_file, &stats, getClk());
+    close_file(perf_file);
+
     // release message queue
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
 
     //upon termination release the clock resources.
     destroyClk(true);
-
-    // TODO output scheduler.perf
+    
+    return 0;
 }
-
-
-
-

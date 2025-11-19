@@ -1,6 +1,7 @@
 #include "headers.h"
 #include "DS/linked_list.h"
 #include "DS/queue.h"
+#include "DS/WTA_linked_list.h"
 
 typedef struct processData
 {
@@ -20,8 +21,9 @@ typedef struct msgbuff
 typedef struct {
     int totalProcesses;
     int totalWaitingTime;
-    int totalTurnaroundTime;
+    float totalWeightedTurnaroundTime;
     int totalExecutionTime;
+    WTALinkedList* wtaList;
 } SchedulerStats;
 
 
@@ -37,9 +39,6 @@ void fork_process(PCB* pcb) {
         exit(0);
     } else if (pid > 0) {
         pcb->pid = pid;
-        if (pcb->starttime == -1) {
-            pcb->starttime = getClk();
-        }
     } else {
         perror("Fork failed");
     }
@@ -86,7 +85,7 @@ void preempt_process(PCB* currentProcess, int currentTime){
     currentProcess->lastActive = currentTime;
 }
 
-Queue* end_process(LinkedList* processList, PCB** currentProcess, SchedulerStats* stats, msgbuff message){
+Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff message){
     PCB* finishedPCB = list_find(processList, message.process.id);
     if (!finishedPCB)
         return queue_create();
@@ -100,12 +99,9 @@ Queue* end_process(LinkedList* processList, PCB** currentProcess, SchedulerStats
     finishedPCB->turnaround = finishedPCB->finishtime - finishedPCB->arrivaltime;
     finishedPCB->wturnaround = (float)finishedPCB->turnaround / finishedPCB->executiontime;
     stats->totalWaitingTime += finishedPCB->waitingtime;
-    stats->totalTurnaroundTime += finishedPCB->turnaround;
+    stats->totalWeightedTurnaroundTime += finishedPCB->wturnaround;
     stats->totalExecutionTime += finishedPCB->executiontime;
-
-    if(*currentProcess == finishedPCB)
-        *currentProcess = NULL;
-    
+    wta_list_add_front(stats->wtaList, finishedPCB->wturnaround);
 
     return dependents;
 }
