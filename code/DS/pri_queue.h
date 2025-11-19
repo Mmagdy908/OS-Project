@@ -54,6 +54,26 @@ void pri_queue_dequeue(PriQueue* q) {
     q->size--;
 }
 
+void pri_queue_remove(PriQueue* q, PCB* pcb) {
+    if (!q->Head) return;
+    PriNode* curr = q->Head;
+    PriNode* prev = NULL;
+    while (curr) {
+        if (curr->pcb == pcb) {
+            if (prev) {
+                prev->next = curr->next;
+            } else {
+                q->Head = curr->next;
+            }
+            free(curr);
+            q->size--;
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+}
+
 void pri_queue_clear(PriQueue* q) {
     while (q->size) {
         pri_queue_dequeue(q);
