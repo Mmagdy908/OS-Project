@@ -4,9 +4,9 @@
 
 enum Schedulers
 {
-    RR=1,
-    HPF,
-    SRTN
+    HPF=1,
+    SRTN,
+    RR
 };
 
 int noArrivingProcesses = 0;

@@ -4,21 +4,6 @@
 #include "DS/pri_queue.h"
 #include "DS/WTA_linked_list.h"
 
-typedef struct processData
-{
-    int arrivaltime;
-    int priority;
-    int runningtime;
-    int id;
-    int dependencyId;
-} processData;
-
-typedef struct msgbuff
-{
-    long mtype;
-    processData process;   //TODO re-check data type received from generator
-} msgbuff;
-
 typedef struct {
     int totalProcesses;
     int totalWaitingTime;

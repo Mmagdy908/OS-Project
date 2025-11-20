@@ -17,6 +17,20 @@ typedef short bool;
 
 #define SHKEY 300
 
+typedef struct processData
+{
+    int arrivaltime;
+    int priority;
+    int runningtime;
+    int id;
+    int dependencyId;
+} processData;
+
+typedef struct msgbuff
+{
+    long mtype;
+    processData process;   //TODO re-check data type received from generator
+} msgbuff;
 
 ///==============================
 //don't mess with this variable//
