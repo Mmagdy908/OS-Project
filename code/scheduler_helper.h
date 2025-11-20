@@ -67,6 +67,8 @@ PCB* add_new_process(LinkedList* processList, SchedulerStats* stats, msgbuff mes
 
 void start_continue_process(PCB* currentProcess){
     currentProcess->state = RUNNING;
+    currentProcess->resumedAt=getClk();
+
     if(currentProcess->starttime == -1){
         currentProcess->starttime = getClk();
         currentProcess->waitingtime = currentProcess->starttime-currentProcess->arrivaltime;
@@ -80,7 +82,7 @@ void start_continue_process(PCB* currentProcess){
 void preempt_process(PCB* currentProcess, int currentTime){
     kill(currentProcess->pid, SIGSTOP);
     currentProcess->state = READY;
-    currentProcess->remainingtime -= (currentTime - currentProcess->lastActive);
+    currentProcess->remainingtime -= (currentTime - currentProcess->resumedAt);
     currentProcess->lastActive = currentTime;
 }
 
