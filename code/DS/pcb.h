@@ -24,6 +24,7 @@ typedef struct PCB{
     int priority;           // 0-10, lower is higher priority
     ProcessState state;             
     int starttime;          // first time process ran (-1 if never started)
+    int resumedAt;
     int lastActive;        // last time process was active
     int readyFrom;         // time when process entered ready state
     int finishtime;
