@@ -131,15 +131,16 @@ void handle_priority_inversion(PCB* blockedPCB, LinkedList* processList, PriQueu
 }
 
 
-// TODO Implement this
 void apply_aging(PriQueue* readyQueue, int currentTime, int agingInterval) {
     PriNode* curr = readyQueue->Head;
     while (curr) {
         PCB* pcb = curr->pcb;
-        int waitingTime = currentTime - pcb->lastActive;
+        int waitingTime = currentTime - pcb->readyFrom;
         if (waitingTime > 0 && waitingTime % agingInterval == 0) {
             int oldPriority = pcb->priority;
             pcb->priority = (pcb->priority > 0) ? pcb->priority - 1 : 0; // increase priority
+
+            curr=curr->next; // move curr forward before modifying the queue
 
             if (pcb->priority != oldPriority) {
                 // Reinsert into priority queue
@@ -147,6 +148,7 @@ void apply_aging(PriQueue* readyQueue, int currentTime, int agingInterval) {
                 pri_queue_enqueue(readyQueue, pcb, pcb->priority);
             }
         }
-        curr = curr->next;
+        else
+            curr = curr->next;
     }
 }

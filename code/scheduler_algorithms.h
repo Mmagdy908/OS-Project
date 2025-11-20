@@ -113,6 +113,7 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
                 // If no dependencies, add to ready queue
                 if(new_pcb->state != BLOCKED){
                     new_pcb->state = READY;
+                    new_pcb->readyFrom= getClk();
                     pri_queue_enqueue(readyQueue, new_pcb, new_pcb->priority);
                 }
 
@@ -125,6 +126,7 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
+                    dependentPCB->readyFrom= getClk();
                     pri_queue_enqueue(readyQueue, dependentPCB, dependentPCB->priority);
                     queue_dequeue(dependents);
                 }
@@ -137,7 +139,6 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
             }   
         }
 
-        // TODO implement this
         // 3- Adaptive priority (aging)
         apply_aging(readyQueue, getClk(), 5);
 

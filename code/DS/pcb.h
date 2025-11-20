@@ -25,6 +25,7 @@ typedef struct PCB{
     ProcessState state;             
     int starttime;          // first time process ran (-1 if never started)
     int lastActive;        // last time process was active
+    int readyFrom;         // time when process entered ready state
     int finishtime;
     float turnaround;       // finishtime - arrivaltime
     float wturnaround;      // turnaround / executiontime

@@ -21,7 +21,7 @@ PriQueue* pri_queue_create() {
     return q;
 }
 
-void pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
+PriNode* pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
     PriNode* newNode = (PriNode*)malloc(sizeof(PriNode));
     newNode->pcb = pcb;
     newNode->next = NULL;
@@ -40,6 +40,7 @@ void pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
         curr->next = newNode;
     }
     q->size++;
+    return newNode;
 }
 
 PriNode* pri_queue_front(PriQueue* q) {
