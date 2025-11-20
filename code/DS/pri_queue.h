@@ -21,7 +21,7 @@ PriQueue* pri_queue_create() {
     return q;
 }
 
-void pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
+PriNode* pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
     PriNode* newNode = (PriNode*)malloc(sizeof(PriNode));
     newNode->pcb = pcb;
     newNode->next = NULL;
@@ -40,6 +40,7 @@ void pri_queue_enqueue(PriQueue* q, PCB* pcb, int priority) {
         curr->next = newNode;
     }
     q->size++;
+    return newNode;
 }
 
 PriNode* pri_queue_front(PriQueue* q) {
@@ -52,6 +53,26 @@ void pri_queue_dequeue(PriQueue* q) {
     q->Head = q->Head->next;
     free(temp);
     q->size--;
+}
+
+void pri_queue_remove(PriQueue* q, PCB* pcb) {
+    if (!q->Head) return;
+    PriNode* curr = q->Head;
+    PriNode* prev = NULL;
+    while (curr) {
+        if (curr->pcb == pcb) {
+            if (prev) {
+                prev->next = curr->next;
+            } else {
+                q->Head = curr->next;
+            }
+            free(curr);
+            q->size--;
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
 }
 
 void pri_queue_clear(PriQueue* q) {

@@ -40,6 +40,7 @@ int main(int argc, char * argv[])
             break;
         case HPF:
             //TODO implement HPF
+            stats=HighestPriorityFirst(msgq_id, &noArrivingProcesses);
             break;
         case SRTN:
             //TODO implement SRTN

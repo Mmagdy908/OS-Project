@@ -1,6 +1,7 @@
 #include "headers.h"
 #include "DS/linked_list.h"
 #include "DS/queue.h"
+#include "DS/pri_queue.h"
 #include "DS/WTA_linked_list.h"
 
 typedef struct processData
@@ -50,14 +51,12 @@ PCB* add_new_process(LinkedList* processList, SchedulerStats* stats, msgbuff mes
     list_add_front(processList, pcb);
 
     // check dependencies
-    int isDependent = 0;
     if(pcb->dependencyId != -1){
         PCB* dependencyPCB = list_find(processList, pcb->dependencyId);
         if(dependencyPCB){
             // add to dependency's dependents queue
             pcb->state=BLOCKED;
             queue_enqueue(dependencyPCB->dependents, pcb);
-            isDependent=1;
         }
     }
 
@@ -104,4 +103,52 @@ Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff messa
     wta_list_add_front(stats->wtaList, finishedPCB->wturnaround);
 
     return dependents;
+}
+
+
+void handle_priority_inversion(PCB* blockedPCB, LinkedList* processList, PriQueue* readyQueue) {
+    while (blockedPCB->state == BLOCKED){
+        PCB* dependency=list_find(processList, blockedPCB->dependencyId);
+        
+        if (!dependency)  
+            break;
+
+        if (blockedPCB->priority < dependency->priority){
+            // inherit priority
+            dependency->priority = blockedPCB->priority;
+            if(dependency->state == READY){
+                pri_queue_remove(readyQueue, dependency);
+                pri_queue_enqueue(readyQueue, dependency, dependency->priority);
+            }
+            
+            blockedPCB = dependency;
+        }
+        else {
+            break;
+        }
+
+    }
+}
+
+
+void apply_aging(PriQueue* readyQueue, int currentTime, int agingInterval) {
+    PriNode* curr = readyQueue->Head;
+    while (curr) {
+        PCB* pcb = curr->pcb;
+        int waitingTime = currentTime - pcb->readyFrom;
+        if (waitingTime > 0 && waitingTime % agingInterval == 0) {
+            int oldPriority = pcb->priority;
+            pcb->priority = (pcb->priority > 0) ? pcb->priority - 1 : 0; // increase priority
+
+            curr=curr->next; // move curr forward before modifying the queue
+
+            if (pcb->priority != oldPriority) {
+                // Reinsert into priority queue
+                pri_queue_remove(readyQueue, pcb);
+                pri_queue_enqueue(readyQueue, pcb, pcb->priority);
+            }
+        }
+        else
+            curr = curr->next;
+    }
 }
