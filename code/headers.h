@@ -32,6 +32,12 @@ typedef struct msgbuff
     processData process;   //TODO re-check data type received from generator
 } msgbuff;
 
+enum MQTypes
+{
+    NEW_PROCESS = 1,
+    TERMINATE_PROCESS = 2
+};
+
 ///==============================
 //don't mess with this variable//
 int * shmaddr;                 //

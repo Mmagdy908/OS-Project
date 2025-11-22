@@ -1,11 +1,5 @@
 #include "output_helper.h"
 
-enum MQTypes
-{
-    NEW_PROCESS = 1,
-    TERMINATE_PROCESS = 2
-};
-
 SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 {
     msgbuff message;

@@ -4,12 +4,6 @@
 
 void clearResources(int);
 
-enum MQTypes
-{
-    NEW_PROCESS = 1,
-    TERMINATE_PROCESS = 2
-};
-
 // function to read input
 msgbuff* readProcesses(int *count)
 {
