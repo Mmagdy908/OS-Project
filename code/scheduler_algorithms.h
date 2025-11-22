@@ -1,7 +1,9 @@
-#include "output_helper.h"
+#include "scheduler_helper.h"
 
 SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 {
+    printf("starting round robin\n");
+
     msgbuff message;
     LinkedList* processList = list_create();
     Queue* readyQueue = queue_create();
@@ -19,27 +21,31 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
             if(message.mtype==NEW_PROCESS){
                 PCB* new_pcb = add_new_process(processList, &stats, message);
+                
                 // If no dependencies, add to ready queue
                 if(new_pcb->state != BLOCKED){
                     new_pcb->state = READY;
                     queue_enqueue(readyQueue, new_pcb);
                 }
+                
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                //unblock dependents
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
                     queue_enqueue(readyQueue, dependentPCB);
                     queue_dequeue(dependents);
                 }
+                
                 queue_clear(dependents);
 
-                // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                
+    
+                // if(currentProcess && currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
         }
 
@@ -116,7 +122,7 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -127,9 +133,9 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
                 queue_clear(dependents);
 
                 // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                // add_log(log_file, currentProcess, "finished", getClk());
+                // if(currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
         }
 
@@ -193,7 +199,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -203,9 +209,9 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
                 queue_clear(dependents);
 
                 // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                // add_log(log_file, currentProcess, "finished", getClk());
+                // if(currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
         }
 

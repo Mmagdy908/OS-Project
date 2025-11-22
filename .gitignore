@@ -1,4 +1,7 @@
 .vscode/
+*.perf
+*.log
+*.txt
 # Prerequisites
 *.d
 
