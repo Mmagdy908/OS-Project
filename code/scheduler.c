@@ -58,7 +58,6 @@ int main(int argc, char * argv[])
             stats=HighestPriorityFirst(msgq_id, &noArrivingProcesses);
             break;
         case SRTN:
-            //TODO implement SRTN
             stats=ShortestRemainingTimeNext(msgq_id,&noArrivingProcesses);
             break;
     }

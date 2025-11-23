@@ -187,13 +187,11 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
     FILE* log_file;
     log_file = open_file("scheduler.log", 1);
 
-    printf("starting SRTN\n");
 
     while(1){
         // 1- Get all processes that have arrived by current time
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
             if(message.mtype==NEW_PROCESS){
-                printf("new process with id: %d\n", message.process.id);
                 PCB* new_pcb = add_new_process(processList, &stats, message);
                 // If no dependencies, add to ready queue
                 if(new_pcb->state != BLOCKED){
@@ -217,6 +215,9 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
                 // if(currentProcess->id == message.process.id)
                 //     currentProcess = NULL;
             }   
+            else{
+                printf("ERROR mtype: %ld\n", message.mtype);
+            }
         }
 
         // 3- Schedule processes in SRTN manner
@@ -225,9 +226,8 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
         if (currentProcess)
             currentProcessRemainingTime = currentProcess->remainingtime-(getClk()-currentProcess->resumedAt);
 
-        if(currentProcess && 
+        if(currentProcess && readyQueue->size &&
             pri_queue_front(readyQueue)->priority < currentProcessRemainingTime){
-
             preempt_process(currentProcess, getClk());
             pri_queue_enqueue(readyQueue, currentProcess, currentProcess->remainingtime);
             
@@ -248,6 +248,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
                 add_log(log_file, currentProcess, "started", getClk());
             else
                 add_log(log_file, currentProcess, "resumed", getClk());
+
         }
 
         // 4- Check termination condition

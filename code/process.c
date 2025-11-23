@@ -20,7 +20,6 @@ int main(int argc, char * argv[])
         while(getClk()==lastActiveTime);
 
         int diff=getClk()-lastActiveTime;
-
         if(diff==1){
             remainingtime--;
         }
