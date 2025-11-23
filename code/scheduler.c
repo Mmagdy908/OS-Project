@@ -26,7 +26,6 @@ int main(int argc, char * argv[])
     signal(SIGINT,clearResources);
     // signal(SIGTERM,clearResources);
 
-    printf("Scheduler Started\n");
     signal(SIGUSR1,setNoArrivingProcessesFlag);
 
     // reading arguments
@@ -70,12 +69,10 @@ int main(int argc, char * argv[])
     close_file(perf_file);
 
     // release message queue
-    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+    // msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
 
     //upon termination release the clock resources.
-    destroyClk(true);
+    destroyClk(false);
     
-    printf("Scheduler Terminated\n");
-
     return 0;
 }

@@ -128,6 +128,7 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
                     dependentPCB->state = READY;
                     dependentPCB->readyFrom= getClk();
                     pri_queue_enqueue(readyQueue, dependentPCB, dependentPCB->priority);
+
                     queue_dequeue(dependents);
                 }
                 queue_clear(dependents);
@@ -186,10 +187,13 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
     FILE* log_file;
     log_file = open_file("scheduler.log", 1);
 
+    printf("starting SRTN\n");
+
     while(1){
         // 1- Get all processes that have arrived by current time
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
             if(message.mtype==NEW_PROCESS){
+                printf("new process with id: %d\n", message.process.id);
                 PCB* new_pcb = add_new_process(processList, &stats, message);
                 // If no dependencies, add to ready queue
                 if(new_pcb->state != BLOCKED){
@@ -217,7 +221,10 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
 
         // 3- Schedule processes in SRTN manner
         // check if current process has longer remaining time
-        int currentProcessRemainingTime = currentProcess->remainingtime-(getClk()-currentProcess->resumedAt);
+        int currentProcessRemainingTime = 0;
+        if (currentProcess)
+            currentProcessRemainingTime = currentProcess->remainingtime-(getClk()-currentProcess->resumedAt);
+
         if(currentProcess && 
             pri_queue_front(readyQueue)->priority < currentProcessRemainingTime){
 
@@ -249,6 +256,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             break;
 
     }
+    printf("terminating SRTN\n");
 
     // release resources
     list_clear(processList);

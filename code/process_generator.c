@@ -193,14 +193,24 @@ int main(int argc, char * argv[])
             i++;
         }
     }
+
+    free(processes);
+
     // signal that all processes are sent
     kill(scheduler_pid,SIGUSR1);
 
-    // 7. Clear clock resources
-    destroyClk(false);
-    free(processes);
+    // wait for scheduler to terminate
+    int stat;
+    waitpid(scheduler_pid, &stat, 0);
 
-    while(1);  // TODO remove this
+    // 7. Clear clock resources
+    // release message queue
+    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+
+    //upon termination release the clock resources.
+    destroyClk(true);
+
+    // while(1);
     return 0;
 }
 
