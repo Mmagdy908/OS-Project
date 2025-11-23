@@ -92,7 +92,7 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 }
 
 
-SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
+SchedulerStats HighestPriorityFirst(int agingInterval, int msgq_id, int* noArrivingProcesses)
 {
     msgbuff message;
     LinkedList* processList = list_create();
@@ -144,7 +144,7 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
 
         // 3- Adaptive priority (aging)
         if(getClk()!=lastClockTime){
-            apply_aging(readyQueue, getClk(), 5);
+            apply_aging(readyQueue, getClk(), agingInterval);
             lastClockTime=getClk();
         }
 
@@ -153,7 +153,6 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
         // check if current process has lower priority
         if(currentProcess && readyQueue->size &&
             pri_queue_front(readyQueue)->priority < currentProcess->priority){
-                printf("enqueuing process id: %d, p: %d while front id: %d, p: %d\n", currentProcess->id, currentProcess->priority, pri_queue_front(readyQueue)->pcb->id, pri_queue_front(readyQueue)->priority);
             preempt_process(currentProcess, getClk());
             pri_queue_enqueue(readyQueue, currentProcess, currentProcess->priority);
             

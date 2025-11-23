@@ -54,8 +54,8 @@ int main(int argc, char * argv[])
             stats=RoundRobin(quantum, msgq_id, &noArrivingProcesses);
             break;
         case HPF:
-            //TODO implement HPF
-            stats=HighestPriorityFirst(msgq_id, &noArrivingProcesses);
+            // TODO get agingInterval from user
+            stats=HighestPriorityFirst(10, msgq_id, &noArrivingProcesses);
             break;
         case SRTN:
             stats=ShortestRemainingTimeNext(msgq_id,&noArrivingProcesses);
