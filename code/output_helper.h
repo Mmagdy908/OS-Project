@@ -56,13 +56,13 @@ void add_performance(FILE* file, SchedulerStats* stats, int total_time){
     if (!file) return;
     
     // calculate standard deviation of WTA
-    float total_WTA=stats->totalWeightedTurnaroundTime;
+    float WTA_mean=stats->totalWeightedTurnaroundTime/stats->totalProcesses;
 
     float wta_sum_sq=0.0;
 
     while(stats->wtaList->size){
         float wta=stats->wtaList->Head->wta;
-        wta_sum_sq+=pow(wta - total_WTA, 2);
+        wta_sum_sq+=pow(wta - WTA_mean, 2);
         wta_list_remove_front(stats->wtaList);
     }
 
