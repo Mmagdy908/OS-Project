@@ -105,6 +105,8 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
     FILE* log_file;
     log_file = open_file("scheduler.log", 1);
 
+    int lastClockTime=getClk();
+
     while(1){
         // 1- Get all processes that have arrived by current time
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
@@ -141,9 +143,26 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
         }
 
         // 3- Adaptive priority (aging)
-        apply_aging(readyQueue, getClk(), 5);
+        if(getClk()!=lastClockTime){
+            apply_aging(readyQueue, getClk(), 5);
+            lastClockTime=getClk();
+        }
 
         // 4- Schedule processes in HPF manner
+
+        // check if current process has lower priority
+        if(currentProcess && readyQueue->size &&
+            pri_queue_front(readyQueue)->priority < currentProcess->priority){
+                printf("enqueuing process id: %d, p: %d while front id: %d, p: %d\n", currentProcess->id, currentProcess->priority, pri_queue_front(readyQueue)->pcb->id, pri_queue_front(readyQueue)->priority);
+            preempt_process(currentProcess, getClk());
+            pri_queue_enqueue(readyQueue, currentProcess, currentProcess->priority);
+            
+            // output scheduler.log (stopped)
+            add_log(log_file, currentProcess, "stopped", getClk());
+
+            currentProcess = NULL;
+        }
+
         // if no current process, get next from ready queue
         if(!currentProcess && readyQueue->size){
             currentProcess = pri_queue_front(readyQueue)->pcb;
