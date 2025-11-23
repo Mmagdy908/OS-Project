@@ -1,14 +1,9 @@
+#include <string.h>
 #include "headers.h"
 #define PROCESS_FILE "processes.txt"
 #define MQKEY 500
 
 void clearResources(int);
-
-enum MQTypes
-{
-    NEW_PROCESS = 1,
-    TERMINATE_PROCESS = 2
-};
 
 // function to read input
 msgbuff* readProcesses(int *count)
@@ -80,7 +75,7 @@ msgbuff* readProcesses(int *count)
 
     return arr;
 }
-
+int msgq_id;
 int main(int argc, char * argv[])
 {
     signal(SIGINT, clearResources);
@@ -123,7 +118,7 @@ int main(int argc, char * argv[])
     //printf("Scheduling Algorithm chosen: %d\n", choice); later 34an ne debug
 
     //Create message queue
-    int msgq_id = msgget(MQKEY, 0666 | IPC_CREAT);
+     msgq_id = msgget(MQKEY, 0666 | IPC_CREAT);
     if (msgq_id == -1)
     {
         perror("Error creating message queue");
@@ -185,11 +180,45 @@ int main(int argc, char * argv[])
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
+    int i=0;
+    while(i<processCount){
+        while(getClk()!=processes[i].process.arrivaltime);
+
+        int currentTime=getClk();
+
+        while(i<processCount && processes[i].process.arrivaltime==currentTime){
+            int res = msgsnd(msgq_id, &processes[i], sizeof(processes[i].process), !IPC_NOWAIT);
+            if (res == -1)
+                perror("Errror in sending process to scheduler");
+            i++;
+        }
+    }
+
+    free(processes);
+
+    // signal that all processes are sent
+    kill(scheduler_pid,SIGUSR1);
+
+    // wait for scheduler to terminate
+    int stat;
+    waitpid(scheduler_pid, &stat, 0);
+
     // 7. Clear clock resources
+    // release message queue
+    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+
+    //upon termination release the clock resources.
     destroyClk(true);
+
+    // while(1);
+    return 0;
 }
 
 void clearResources(int signum)
 {
     //TODO Clears all resources in case of interruption
+    // destroyClk(false);
+    destroyClk(true);
+    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+    exit(0);
 }

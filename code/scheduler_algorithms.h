@@ -1,13 +1,9 @@
-#include "output_helper.h"
-
-enum MQTypes
-{
-    NEW_PROCESS = 1,
-    TERMINATE_PROCESS = 2
-};
+#include "scheduler_helper.h"
 
 SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 {
+    printf("starting round robin\n");
+
     msgbuff message;
     LinkedList* processList = list_create();
     Queue* readyQueue = queue_create();
@@ -25,27 +21,31 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
             if(message.mtype==NEW_PROCESS){
                 PCB* new_pcb = add_new_process(processList, &stats, message);
+                
                 // If no dependencies, add to ready queue
                 if(new_pcb->state != BLOCKED){
                     new_pcb->state = READY;
                     queue_enqueue(readyQueue, new_pcb);
                 }
+                
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                //unblock dependents
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
                     queue_enqueue(readyQueue, dependentPCB);
                     queue_dequeue(dependents);
                 }
+                
                 queue_clear(dependents);
 
-                // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                
+    
+                // if(currentProcess && currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
         }
 
@@ -92,7 +92,7 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 }
 
 
-SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
+SchedulerStats HighestPriorityFirst(int agingInterval, int msgq_id, int* noArrivingProcesses)
 {
     msgbuff message;
     LinkedList* processList = list_create();
@@ -104,6 +104,8 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
 
     FILE* log_file;
     log_file = open_file("scheduler.log", 1);
+
+    int lastClockTime=getClk();
 
     while(1){
         // 1- Get all processes that have arrived by current time
@@ -122,27 +124,44 @@ SchedulerStats HighestPriorityFirst(int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
                     dependentPCB->readyFrom= getClk();
                     pri_queue_enqueue(readyQueue, dependentPCB, dependentPCB->priority);
+
                     queue_dequeue(dependents);
                 }
                 queue_clear(dependents);
 
                 // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                // add_log(log_file, currentProcess, "finished", getClk());
+                // if(currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
         }
 
         // 3- Adaptive priority (aging)
-        apply_aging(readyQueue, getClk(), 5);
+        if(getClk()!=lastClockTime){
+            apply_aging(readyQueue, getClk(), agingInterval);
+            lastClockTime=getClk();
+        }
 
         // 4- Schedule processes in HPF manner
+
+        // check if current process has lower priority
+        if(currentProcess && readyQueue->size &&
+            pri_queue_front(readyQueue)->priority < currentProcess->priority){
+            preempt_process(currentProcess, getClk());
+            pri_queue_enqueue(readyQueue, currentProcess, currentProcess->priority);
+            
+            // output scheduler.log (stopped)
+            add_log(log_file, currentProcess, "stopped", getClk());
+
+            currentProcess = NULL;
+        }
+
         // if no current process, get next from ready queue
         if(!currentProcess && readyQueue->size){
             currentProcess = pri_queue_front(readyQueue)->pcb;
@@ -186,6 +205,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
     FILE* log_file;
     log_file = open_file("scheduler.log", 1);
 
+
     while(1){
         // 1- Get all processes that have arrived by current time
         while(msgrcv(msgq_id, &message, sizeof(message.process), 0, IPC_NOWAIT)>0){
@@ -199,7 +219,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message);
+                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -209,18 +229,23 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
                 queue_clear(dependents);
 
                 // output scheduler.log (finished)
-                add_log(log_file, currentProcess, "finished", getClk());
-                if(currentProcess->id == message.process.id)
-                    currentProcess = NULL;
+                // add_log(log_file, currentProcess, "finished", getClk());
+                // if(currentProcess->id == message.process.id)
+                //     currentProcess = NULL;
             }   
+            else{
+                printf("ERROR mtype: %ld\n", message.mtype);
+            }
         }
 
         // 3- Schedule processes in SRTN manner
         // check if current process has longer remaining time
-        int currentProcessRemainingTime = currentProcess->remainingtime-(getClk()-currentProcess->resumedAt);
-        if(currentProcess && 
-            pri_queue_front(readyQueue)->priority < currentProcessRemainingTime){
+        int currentProcessRemainingTime = 0;
+        if (currentProcess)
+            currentProcessRemainingTime = currentProcess->remainingtime-(getClk()-currentProcess->resumedAt);
 
+        if(currentProcess && readyQueue->size &&
+            pri_queue_front(readyQueue)->priority < currentProcessRemainingTime){
             preempt_process(currentProcess, getClk());
             pri_queue_enqueue(readyQueue, currentProcess, currentProcess->remainingtime);
             
@@ -241,6 +266,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
                 add_log(log_file, currentProcess, "started", getClk());
             else
                 add_log(log_file, currentProcess, "resumed", getClk());
+
         }
 
         // 4- Check termination condition
@@ -249,6 +275,7 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             break;
 
     }
+    printf("terminating SRTN\n");
 
     // release resources
     list_clear(processList);

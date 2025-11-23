@@ -2,30 +2,8 @@
 #include "DS/linked_list.h"
 #include "DS/queue.h"
 #include "DS/pri_queue.h"
-#include "DS/WTA_linked_list.h"
+#include "output_helper.h"
 
-typedef struct processData
-{
-    int arrivaltime;
-    int priority;
-    int runningtime;
-    int id;
-    int dependencyId;
-} processData;
-
-typedef struct msgbuff
-{
-    long mtype;
-    processData process;   //TODO re-check data type received from generator
-} msgbuff;
-
-typedef struct {
-    int totalProcesses;
-    int totalWaitingTime;
-    float totalWeightedTurnaroundTime;
-    int totalExecutionTime;
-    WTALinkedList* wtaList;
-} SchedulerStats;
 
 
 
@@ -34,10 +12,14 @@ void fork_process(PCB* pcb) {
     
     if (pid == 0) {
         // Child process - exec the process program
+        char id_str[10];
         char runtime_str[10];
+        sprintf(id_str, "%d", pcb->id);
         sprintf(runtime_str, "%d", pcb->remainingtime);
-        execl("./process.out", "process.out", runtime_str, NULL);
-        exit(0);
+        
+        execl("./process.out", "process.out", id_str, runtime_str, NULL);
+        perror("ERROR forking new process\n");
+        exit(1);
     } else if (pid > 0) {
         pcb->pid = pid;
     } else {
@@ -52,6 +34,7 @@ PCB* add_new_process(LinkedList* processList, SchedulerStats* stats, msgbuff mes
 
     // check dependencies
     if(pcb->dependencyId != -1){
+        
         PCB* dependencyPCB = list_find(processList, pcb->dependencyId);
         if(dependencyPCB){
             // add to dependency's dependents queue
@@ -74,7 +57,7 @@ void start_continue_process(PCB* currentProcess){
         currentProcess->waitingtime = currentProcess->starttime-currentProcess->arrivaltime;
         fork_process(currentProcess);
     }else{
-        currentProcess->waitingtime = getClk()-currentProcess->lastActive;
+        currentProcess->waitingtime += getClk()-currentProcess->lastActive;
         kill(currentProcess->pid, SIGCONT);
     }
 }
@@ -83,19 +66,20 @@ void preempt_process(PCB* currentProcess, int currentTime){
     kill(currentProcess->pid, SIGSTOP);
     currentProcess->state = READY;
     currentProcess->remainingtime -= (currentTime - currentProcess->resumedAt);
+    currentProcess->remainingtime = currentProcess->remainingtime>0 ? currentProcess->remainingtime : 0;
     currentProcess->lastActive = currentTime;
 }
 
-Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff message){
+Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff message, PCB** currentProcess, FILE* log_file){
     PCB* finishedPCB = list_find(processList, message.process.id);
     if (!finishedPCB)
         return queue_create();
     
     Queue* dependents = queue_copy(finishedPCB->dependents);
-    
-    // remove finished process from processList
-    list_remove(processList, finishedPCB);
+    finishedPCB->dependents=NULL;
 
+
+    finishedPCB->remainingtime = 0;
     finishedPCB->finishtime = getClk();
     finishedPCB->turnaround = finishedPCB->finishtime - finishedPCB->arrivaltime;
     finishedPCB->wturnaround = (float)finishedPCB->turnaround / finishedPCB->executiontime;
@@ -103,6 +87,15 @@ Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff messa
     stats->totalWeightedTurnaroundTime += finishedPCB->wturnaround;
     stats->totalExecutionTime += finishedPCB->executiontime;
     wta_list_add_front(stats->wtaList, finishedPCB->wturnaround);
+
+    // output scheduler.log (finished)
+    add_log(log_file, finishedPCB, "finished", getClk());
+
+    // remove finished process from processList
+    if(*currentProcess && (*currentProcess)->id == message.process.id)
+        *currentProcess = NULL;
+        
+    list_remove(processList, finishedPCB);
 
     return dependents;
 }

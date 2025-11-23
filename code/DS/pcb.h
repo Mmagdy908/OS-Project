@@ -55,7 +55,8 @@ PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId
 }
 
 void pcb_clear(PCB* pcb) {
-    queue_clear(pcb->dependents);
-    free(pcb->dependents);
+    if(pcb->dependents)
+        queue_clear(pcb->dependents);
+    // free(pcb->dependents);
     free(pcb);
 }
