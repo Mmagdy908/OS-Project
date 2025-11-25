@@ -52,6 +52,26 @@ void queue_dequeue(Queue* q) {
     q->size--;
 }
 
+void queue_remove(Queue* q, PCB* pcb) {
+    if (!q->Head) return;
+    QueueNode* curr = q->Head;
+    QueueNode* prev = NULL;
+    while (curr) {
+        if (curr->pcb == pcb) {
+            if (prev) {
+                prev->next = curr->next;
+            } else {
+                q->Head = curr->next;
+            }
+            free(curr);
+            q->size--;
+            return;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+}
+
 Queue* queue_copy(Queue* original) {
     Queue* newQueue = queue_create();
     QueueNode* curr = original->Head;

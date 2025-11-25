@@ -217,6 +217,8 @@ int main(int argc, char * argv[])
     //upon termination release the clock resources.
     destroyClk(true);
 
+    while(wait(&stat)>0);
+    
     // while(1);
     return 0;
 }

@@ -70,8 +70,7 @@ void preempt_process(PCB* currentProcess, int currentTime){
     currentProcess->lastActive = currentTime;
 }
 
-Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff message, PCB** currentProcess, FILE* log_file){
-    PCB* finishedPCB = list_find(processList, message.process.id);
+Queue* end_process(LinkedList* processList, SchedulerStats* stats, PCB* finishedPCB, PCB** currentProcess, FILE* log_file){
     if (!finishedPCB)
         return queue_create();
     
@@ -91,11 +90,6 @@ Queue* end_process(LinkedList* processList, SchedulerStats* stats, msgbuff messa
     // output scheduler.log (finished)
     add_log(log_file, finishedPCB, "finished", getClk());
 
-    // remove finished process from processList
-    if(*currentProcess && (*currentProcess)->id == message.process.id)
-        *currentProcess = NULL;
-        
-    list_remove(processList, finishedPCB);
 
     return dependents;
 }

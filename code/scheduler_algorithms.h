@@ -2,8 +2,6 @@
 
 SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
 {
-    printf("starting round robin\n");
-
     msgbuff message;
     LinkedList* processList = list_create();
     Queue* readyQueue = queue_create();
@@ -31,8 +29,19 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
+                PCB* finishedPCB = list_find(processList, message.process.id);
+                Queue* dependents = end_process(processList, &stats, finishedPCB, &currentProcess, log_file);
+                if(currentProcess && (currentProcess)->id == finishedPCB->id)
+                    currentProcess = NULL;
+                else{
+                    // remove from ready queue
+                    queue_remove(readyQueue,finishedPCB);
+                }
+
+                // remove finished process from processList
+                list_remove(processList, finishedPCB);
+
                 //unblock dependents
-                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -123,7 +132,19 @@ SchedulerStats HighestPriorityFirst(int agingInterval, int msgq_id, int* noArriv
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
+                PCB* finishedPCB = list_find(processList, message.process.id);
+                Queue* dependents = end_process(processList, &stats, finishedPCB, &currentProcess, log_file);
+                if(currentProcess && (currentProcess)->id == finishedPCB->id)
+                    currentProcess = NULL;
+                else{
+                    // remove from ready queue
+                    pri_queue_remove(readyQueue,finishedPCB);
+                }
+
+                // remove finished process from processList
+                list_remove(processList, finishedPCB);
+                
+                // unblock dependents
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -217,7 +238,19 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             }
             else if(message.mtype==TERMINATE_PROCESS){
                 // 2- finished processes and unblock dependents
-                Queue* dependents = end_process(processList, &stats, message, &currentProcess, log_file);
+                PCB* finishedPCB = list_find(processList, message.process.id);
+                Queue* dependents = end_process(processList, &stats, finishedPCB, &currentProcess, log_file);
+                if(currentProcess && (currentProcess)->id == finishedPCB->id)
+                    currentProcess = NULL;
+                else{
+                    // remove from ready queue
+                    pri_queue_remove(readyQueue,finishedPCB);
+                }
+
+                // remove finished process from processList
+                list_remove(processList, finishedPCB);
+
+                // unblock dependents
                 while(dependents->size){
                     PCB* dependentPCB=queue_front(dependents)->pcb;
                     dependentPCB->state = READY;
@@ -272,7 +305,6 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
             break;
 
     }
-    printf("terminating SRTN\n");
 
     // release resources
     list_clear(processList);
