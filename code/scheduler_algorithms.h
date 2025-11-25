@@ -76,7 +76,6 @@ SchedulerStats RoundRobin(int quantum, int msgq_id, int* noArrivingProcesses)
         }
 
         // 4- Check termination condition
-        //TODO change noArrivingProcesses flag depending on signal comming from process generator
         if(processList->size == 0 && *noArrivingProcesses)
             break;
 
@@ -176,7 +175,6 @@ SchedulerStats HighestPriorityFirst(int agingInterval, int msgq_id, int* noArriv
         }
 
         // 5- Check termination condition
-        //TODO change noArrivingProcesses flag depending on signal comming from process generator
         if(processList->size == 0 && *noArrivingProcesses)
             break;
 
@@ -270,7 +268,6 @@ SchedulerStats ShortestRemainingTimeNext(int msgq_id, int* noArrivingProcesses)
         }
 
         // 4- Check termination condition
-        //TODO change noArrivingProcesses flag depending on signal comming from process generator
         if(processList->size == 0 && *noArrivingProcesses)
             break;
 

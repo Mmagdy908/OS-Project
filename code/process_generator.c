@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
     // printf("Processes sorted by arrival time.\n"); 34an law magdy 3ayz ye debug ba3din
 
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
-    int choice, quantum = 0;
+    int choice, quantum = 0, agingInterval = 0;
     printf("Choose Scheduling Algorithm:\n");
     printf("1- HPF\n2- SRTN\n3- RR\n");         // 3ayz ab2a ata2kd
     scanf("%d", &choice);    
@@ -114,6 +114,11 @@ int main(int argc, char * argv[])
     {
         printf("Enter RR quantum: ");
         scanf("%d", &quantum);
+    }
+    if (choice == 1)   
+    {
+        printf("Enter HPF aging interval: ");
+        scanf("%d", &agingInterval);
     }
     //printf("Scheduling Algorithm chosen: %d\n", choice); later 34an ne debug
 
@@ -160,11 +165,13 @@ int main(int argc, char * argv[])
         // Child → Scheduler
         char algoStr[10];
         char quantumStr[10];
+        char agingIntervalStr[10];
 
         sprintf(algoStr, "%d", choice);   // from earlier user input
         sprintf(quantumStr, "%d", quantum);   // 0 if not RR
+        sprintf(agingIntervalStr, "%d", agingInterval);   // 0 if not HPF
 
-        execl("./scheduler.out", "scheduler.out", algoStr, quantumStr, NULL);
+        execl("./scheduler.out", "scheduler.out", algoStr, quantumStr, agingIntervalStr, NULL);
 
         perror("Error executing scheduler.out");
         exit(EXIT_FAILURE);

@@ -29,7 +29,7 @@ typedef struct processData
 typedef struct msgbuff
 {
     long mtype;
-    processData process;   //TODO re-check data type received from generator
+    processData process;   
 } msgbuff;
 
 enum MQTypes

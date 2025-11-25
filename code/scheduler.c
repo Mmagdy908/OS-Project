@@ -35,6 +35,11 @@ int main(int argc, char * argv[])
         quantum = atoi(argv[2]);
     }
 
+    int agingInterval=0;
+    if(schedulerType==HPF){
+        agingInterval=atoi(argv[3]);
+    }
+
     initClk();
     
     //TODO implement the scheduler :)
@@ -54,8 +59,7 @@ int main(int argc, char * argv[])
             stats=RoundRobin(quantum, msgq_id, &noArrivingProcesses);
             break;
         case HPF:
-            // TODO get agingInterval from user
-            stats=HighestPriorityFirst(10, msgq_id, &noArrivingProcesses);
+            stats=HighestPriorityFirst(agingInterval, msgq_id, &noArrivingProcesses);
             break;
         case SRTN:
             stats=ShortestRemainingTimeNext(msgq_id,&noArrivingProcesses);
