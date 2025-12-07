@@ -3,7 +3,7 @@
 #include "DS/queue.h"
 #include "DS/pri_queue.h"
 #include "output_helper.h"
-
+#include"//Memory/mmu.h"
 
 
 
@@ -29,8 +29,10 @@ void fork_process(PCB* pcb) {
 
 PCB* add_new_process(LinkedList* processList, SchedulerStats* stats, msgbuff message){
     // Add process to processList
-    PCB* pcb = pcb_create(message.process.id, message.process.arrivaltime, message.process.runningtime, message.process.priority, message.process.dependencyId);
+    PCB* pcb = pcb_create(message.process.id, message.process.arrivaltime, message.process.runningtime, message.process.priority, message.process.dependencyId, message.process.base, message.process.limit);
     list_add_front(processList, pcb);
+
+    //setup_page_table(pcb->pid); not ready yet
 
     // check dependencies
     if(pcb->dependencyId != -1){
