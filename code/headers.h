@@ -24,6 +24,8 @@ typedef struct processData
     int runningtime;
     int id;
     int dependencyId;
+    int base;
+    int limit;
 } processData;
 
 typedef struct msgbuff

@@ -45,9 +45,9 @@ msgbuff* readProcesses(int *count)
         msgbuff msg;
         msg.mtype = NEW_PROCESS;  // always 1 for arrivals
 
-        int id, arrivaltime, runningtime, priority, dependencyId;
-        int read = sscanf(line, "%d %d %d %d %d",
-                          &id, &arrivaltime, &runningtime, &priority, &dependencyId);
+        int id, arrivaltime, runningtime, priority, dependencyId, base, limit;
+        int read = sscanf(line, "%d %d %d %d %d %d %d",
+                          &id, &arrivaltime, &runningtime, &priority, &dependencyId, &base, &limit);
 
         if (read < 4)
         {
@@ -63,6 +63,8 @@ msgbuff* readProcesses(int *count)
         msg.process.runningtime = runningtime;
         msg.process.priority    = priority;
         msg.process.dependencyId = dependencyId;
+        msg.process.base = base;
+        msg.process.limit = limit;
 
         arr[i++] = msg;
     }
