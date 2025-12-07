@@ -28,13 +28,16 @@ typedef struct PCB{
     int lastActive;        // last time process was active
     int readyFrom;         // time when process entered ready state
     int finishtime;
+    int disk_base;
+    int disk_limit;
+    int page_table_frame;
     float turnaround;       // finishtime - arrivaltime
     float wturnaround;      // turnaround / executiontime
     pid_t pid;              // actual process ID after fork
     Queue* dependents;    // queue of PCB* that depend on this process
 } PCB;
 
-PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId) {
+PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId, int disk_base, int disk_limit) {
     PCB* pcb = (PCB*)malloc(sizeof(PCB));
     pcb->id = id;
     pcb->dependencyId = dependencyId;
@@ -50,6 +53,9 @@ PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId
     pcb->turnaround = 0;
     pcb->wturnaround = 0;
     pcb->pid = -1;
+    pcb->disk_base = disk_base;
+    pcb->disk_limit = disk_limit;
+    pcb->page_table_frame = -1;
     pcb->dependents = queue_create();
     return pcb;
 }
