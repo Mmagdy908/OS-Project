@@ -135,3 +135,137 @@ int setup_page_table(int process_id)
 void clear_MMU_resources(){
     PT_list_clear(page_tables_list);
 }
+
+
+
+
+// ==========================================
+// TEST SUITE
+// ==========================================
+
+void print_test_header(const char* name) {
+    printf("\n========================================\n");
+    printf("TEST: %s\n", name);
+    printf("========================================\n");
+}
+
+void assert_equals(int expected, int actual, const char* msg) {
+    if (expected != actual) {
+        printf("FAILED: %s. Expected %d, got %d\n", msg, expected, actual);
+        exit(1);
+    } else {
+        printf("PASS: %s\n", msg);
+    }
+}
+
+int main() {
+    printf("Starting MMU Tests...\n");
+
+    // ---------------------------------------------------------
+    // Scenario 1: Initialization
+    // ---------------------------------------------------------
+    print_test_header("Initialization");
+    init_MMU();
+    
+    // Check Stack Top (Should be 31 for size 32, assuming filled 0..31)
+    // Your Init loop: stack_top starts at -1. Loop 0 to 31.
+    // free_frames_stack[++stack_top] = i; 
+    // Ends with stack_top = 31.
+    assert_equals(MEMORY_SIZE-1, stack_top, "Stack top should be 31 after init");
+    assert_equals(0, free_frames_stack[stack_top], "Top of stack should be 0 (LIFO)");
+
+    // ---------------------------------------------------------
+    // Scenario 2: Process Startup (Allocation)
+    // ---------------------------------------------------------
+    print_test_header("Process Startup (PID 100)");
+    
+    // Expecting 2 frames: 1 for PT, 1 for Page 0
+    int pt_frame = setup_page_table(100);
+    
+    // Check allocation results
+    assert_equals(MEMORY_SIZE-3, stack_top, "Stack top should decrease by 2");
+    
+    // Check PT Frame Metadata
+    assert_equals(100, memory[pt_frame].process_id, "PT Frame owner should be 100");
+    assert_equals(-1, memory[pt_frame].virtual_page_number, "PT Frame VPN should be -1");
+    
+    // Find Page 0 Frame
+    PTE* pt_100 = PT_list_find(page_tables_list, 100);
+    int p0_frame = pt_100[0].frame_number;
+    
+    assert_equals(100, memory[p0_frame].process_id, "Page 0 Frame owner should be 100");
+    assert_equals(0, memory[p0_frame].virtual_page_number, "Page 0 Frame VPN should be 0");
+    assert_equals(1, pt_100[0].valid, "Page 0 should be marked valid in PT");
+
+    // ---------------------------------------------------------
+    // Scenario 3: Memory Request - HIT (Read)
+    // ---------------------------------------------------------
+    print_test_header("Memory Request - HIT (Read Page 0)");
+    
+    int cycles = MMU_request(100, 0, 0); // Read
+    assert_equals(0, cycles, "Hit should cost 0 cycles");
+    assert_equals(1, memory[p0_frame].reference, "Reference bit should be 1");
+    assert_equals(0, memory[p0_frame].dirty, "Dirty bit should remain 0 on Read");
+
+    // ---------------------------------------------------------
+    // Scenario 4: Memory Request - MISS (Write)
+    // ---------------------------------------------------------
+    print_test_header("Memory Request - MISS (Write Page 5)");
+    
+    cycles = MMU_request(100, 5, 1); // Write to Page 5
+    assert_equals(10, cycles, "Miss (Clean Alloc) should cost 10 cycles");
+    
+    int p5_frame = pt_100[5].frame_number;
+    assert_equals(100, memory[p5_frame].process_id, "Page 5 Frame owner should be 100");
+    assert_equals(1, memory[p5_frame].dirty, "Dirty bit should be 1 on Write");
+    assert_equals(1, pt_100[5].valid, "Page 5 should now be valid");
+
+    // ---------------------------------------------------------
+    // Scenario 5: Memory Request - HIT (Write Update)
+    // ---------------------------------------------------------
+    print_test_header("Memory Request - HIT (Write to Page 0)");
+    
+    cycles = MMU_request(100, 0, 1); // Write to Page 0
+    assert_equals(0, cycles, "Hit should cost 0 cycles");
+    assert_equals(1, memory[p0_frame].dirty, "Dirty bit should update to 1");
+
+    // ---------------------------------------------------------
+    // Scenario 6: Cleanup (Termination)
+    // ---------------------------------------------------------
+    print_test_header("Process Termination");
+    
+    int stack_before_release = stack_top;
+    release_process_frames(100);
+    
+    // We allocated 3 frames total for PID 100 (PT, Page 0, Page 5)
+    assert_equals(stack_before_release + 3, stack_top, "Stack top should recover 3 frames");
+    
+    // Check if Page Table Valid bits were cleared
+    assert_equals(0, pt_100[5].valid, "Page 5 should be invalid after release");
+    
+    // Check if Frame Memory was reset
+    assert_equals(-1, memory[p5_frame].process_id, "Released frame PID should be -1");
+
+    // ---------------------------------------------------------
+    // Scenario 7: Full Memory (Edge Case)
+    // ---------------------------------------------------------
+    print_test_header("Memory Full Behavior");
+    
+    // 1. Fill all memory
+    while(stack_top != -1) {
+        get_free_frame();
+    }
+    
+    // 2. Try to allocate one more
+    int dirty_swap = 0;
+    int result = allocate_frame(999, 1, &dirty_swap);
+    
+    // 3. Verify behavior (Current implementation returns 0)
+    assert_equals(0, result, "Should return 0 when full (as per current impl)");
+    printf("Note: 'Swapping not implemented' message expected above.\n");
+
+    // Cleanup
+    clear_MMU_resources();
+    printf("\nAll Tests Passed Successfully!\n");
+    return 0;
+}
