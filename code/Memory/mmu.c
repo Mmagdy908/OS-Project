@@ -21,11 +21,102 @@ void init_MMU(){
     }
 }
 
+int get_free_frame(){
+    if(stack_top == MEMORY_SIZE - 1){
+        return -1; // No free frames
+    }
+    return free_frames_stack[++stack_top];
+}
+
+void free_frame(int frame_number){
+    if(frame_number < 0 || frame_number >= MEMORY_SIZE){
+        printf("free_frame: Invalid frame number %d\n", frame_number);
+        return;
+    }
+
+    if(stack_top == -1){
+        printf("free_frame_stack overflow, cannot free frame %d\n", frame_number);
+        return;
+    }
+
+    memory[frame_number].process_id = -1;
+    memory[frame_number].reference = 0;
+    memory[frame_number].dirty = 0;
+    free_frames_stack[stack_top--] = frame_number;
+}
+
+int allocate_frame(int process_id, int *dirty_swap){
+    int frame_number = get_free_frame();
+    if(frame_number == -1){
+        // TODO Implement second chance algorithm here 
+        // TODO set dirty_swap to 1 if a dirty page is swapped out
+        // TODO ignore dirty_swap if it's NULL
+        // TODO don't swap out the page table frames
+        return 0; // temp for now
+    }
+    memory[frame_number].process_id = process_id;
+    memory[frame_number].reference = 1;
+    return frame_number;
+}
+
+void release_process_frames(int process_id){
+    for(int i = 0; i < MEMORY_SIZE; i++){
+        if(memory[i].process_id == process_id){
+            free_frame(i);
+        }
+    }
+}
+/*** 
+ * returns number of clock cycles which process should be blocked for
+ * 0 if no blocking is needed
+ * 10 if clean swap occurs
+ * 20 if dirty swap is needed
+ * -1 for errors
+ * ***/
+int MMU_request(int process_id, int virtual_page_number, int write){
+    PTE* page_table = PT_list_find(page_tables_list, process_id);
+    if(!page_table){
+        printf("MMU_request: Page table not found for process_id %d\n", process_id);
+        return -1; // Page table not found
+    }
+
+    if(page_table[virtual_page_number].valid){
+        int frame_number = page_table[virtual_page_number].frame_number;
+        memory[frame_number].reference = 1;
+        if(write){
+            memory[frame_number].dirty = 1;
+        }
+        return 0; // No blocking needed
+    }else{
+        int dirty_swap = 0;
+        int frame_number = allocate_frame(process_id, &dirty_swap);
+        
+        page_table[virtual_page_number].frame_number = frame_number;
+        page_table[virtual_page_number].valid = 1;
+        memory[frame_number].dirty = write ? 1 : 0;
+        return dirty_swap? 20 : 10; // Return blocking time
+    }
+
+}
+
 int setup_page_table(int process_id)
 {
-    // Temporary stub — does nothing
-    printf("[MMU] setup_page_table called for PID %d (stub)\n", process_id);
-    return -1; // temp value 
+    PTE page_table[PAGE_TABLE_SIZE];
+    for(int i = 0; i < PAGE_TABLE_SIZE; i++){
+        page_table[i].frame_number = -1;
+        page_table[i].valid = 0;
+    }
+
+    int page_table_frame_number = allocate_frame(process_id, NULL);
+
+    PT_list_add(page_tables_list, process_id, page_table);
+
+    // load first page into memory
+    int first_frame_number = allocate_frame(process_id, NULL);
+    page_table[0].frame_number = first_frame_number;
+    page_table[0].valid = 1;
+    memory[first_frame_number].dirty = 0;
+    return page_table_frame_number; // return frame number for page table
 }
 
 
