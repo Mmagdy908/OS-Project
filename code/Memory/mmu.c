@@ -1,5 +1,6 @@
 #include "mmu.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "../DS/PT.h"
 
 #define PAGE_TABLE_SIZE 64
@@ -39,13 +40,23 @@ void free_frame(int frame_number){
         return;
     }
 
+    // invalidate the frame from page table
+    PTE* page_table = PT_list_find(page_tables_list, memory[frame_number].process_id);
+    if(page_table){
+        int virtual_page_number = memory[frame_number].virtual_page_number;
+
+        // check for valid virtual_page_number(in case of page table frame)
+        if(virtual_page_number >= 0)
+            page_table[virtual_page_number].valid = 0;
+    }
+
     memory[frame_number].process_id = -1;
     memory[frame_number].reference = 0;
     memory[frame_number].dirty = 0;
     free_frames_stack[stack_top--] = frame_number;
 }
 
-int allocate_frame(int process_id, int *dirty_swap){
+int allocate_frame(int process_id, int virtual_page_number, int *dirty_swap){
     int frame_number = get_free_frame();
     if(frame_number == -1){
         // TODO Implement second chance algorithm here 
@@ -56,6 +67,7 @@ int allocate_frame(int process_id, int *dirty_swap){
     }
     memory[frame_number].process_id = process_id;
     memory[frame_number].reference = 1;
+    memory[frame_number].virtual_page_number = virtual_page_number;
     return frame_number;
 }
 
@@ -89,7 +101,7 @@ int MMU_request(int process_id, int virtual_page_number, int write){
         return 0; // No blocking needed
     }else{
         int dirty_swap = 0;
-        int frame_number = allocate_frame(process_id, &dirty_swap);
+        int frame_number = allocate_frame(process_id, virtual_page_number, &dirty_swap);
         
         page_table[virtual_page_number].frame_number = frame_number;
         page_table[virtual_page_number].valid = 1;
@@ -101,18 +113,18 @@ int MMU_request(int process_id, int virtual_page_number, int write){
 
 int setup_page_table(int process_id)
 {
-    PTE page_table[PAGE_TABLE_SIZE];
+    PTE* page_table = (PTE*)malloc(sizeof(PTE) * PAGE_TABLE_SIZE);
     for(int i = 0; i < PAGE_TABLE_SIZE; i++){
         page_table[i].frame_number = -1;
         page_table[i].valid = 0;
     }
 
-    int page_table_frame_number = allocate_frame(process_id, NULL);
+    int page_table_frame_number = allocate_frame(process_id,-1, NULL);
 
     PT_list_add(page_tables_list, process_id, page_table);
 
     // load first page into memory
-    int first_frame_number = allocate_frame(process_id, NULL);
+    int first_frame_number = allocate_frame(process_id, 0, NULL);
     page_table[0].frame_number = first_frame_number;
     page_table[0].valid = 1;
     memory[first_frame_number].dirty = 0;

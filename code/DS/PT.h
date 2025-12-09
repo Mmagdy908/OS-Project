@@ -60,6 +60,7 @@ void PT_list_remove(PTLinkedList* ll, int process_id) {
     if (ll->Head->process_id == process_id) {
         PTListNode* temp = ll->Head;
         ll->Head = ll->Head->next;
+        free(temp->PT);
         free(temp);
         ll->size--;
         return;
@@ -73,6 +74,7 @@ void PT_list_remove(PTLinkedList* ll, int process_id) {
     if (curr->next) {
         PTListNode* temp = curr->next;
         curr->next = curr->next->next;
+        free(temp->PT);
         free(temp);
         ll->size--;
     }
@@ -80,12 +82,10 @@ void PT_list_remove(PTLinkedList* ll, int process_id) {
 
 void PT_list_clear(PTLinkedList* ll) {
     if(!ll) return;
-    
-    PTListNode* curr = ll->Head;
-    while (curr) {
-        PTListNode* temp = curr;
-        curr = curr->next;
-        free(temp);
+
+    while(ll->size){
+        PT_list_remove(ll, ll->Head->process_id);
     }
+    
     free(ll);
 }

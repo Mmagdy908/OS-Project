@@ -5,7 +5,7 @@ typedef struct MemoryFrame{
     int process_id;
     int reference;
     int dirty;  
-//int Page number (virtual number for reverse mapping) 
+    int virtual_page_number; // (virtual number for reverse mapping) 
 } MemoryFrame;
 
 void init_MMU();
