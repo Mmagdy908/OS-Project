@@ -9,7 +9,7 @@
 PTLinkedList* page_tables_list = NULL;
 MemoryFrame memory[MEMORY_SIZE];
 int free_frames_stack[MEMORY_SIZE];
-int stack_top = MEMORY_SIZE - 1;
+int stack_top = - 1;
 
 void init_MMU(){
     page_tables_list = PT_list_create();
@@ -17,16 +17,15 @@ void init_MMU(){
         memory[i].process_id = -1;
         memory[i].reference = 0;
         memory[i].dirty = 0;
-        free_frames_stack[i] = i;
-        free_frames_stack[stack_top--] = i;
+        free_frames_stack[++stack_top] = i;
     }
 }
 
 int get_free_frame(){
-    if(stack_top == MEMORY_SIZE - 1){
+    if(stack_top == - 1){
         return -1; // No free frames
     }
-    return free_frames_stack[++stack_top];
+    return free_frames_stack[stack_top--];
 }
 
 void free_frame(int frame_number){
@@ -35,7 +34,7 @@ void free_frame(int frame_number){
         return;
     }
 
-    if(stack_top == -1){
+    if(stack_top == MEMORY_SIZE -1){
         printf("free_frame_stack overflow, cannot free frame %d\n", frame_number);
         return;
     }
@@ -53,7 +52,7 @@ void free_frame(int frame_number){
     memory[frame_number].process_id = -1;
     memory[frame_number].reference = 0;
     memory[frame_number].dirty = 0;
-    free_frames_stack[stack_top--] = frame_number;
+    free_frames_stack[++stack_top] = frame_number;
 }
 
 int allocate_frame(int process_id, int virtual_page_number, int *dirty_swap){
@@ -63,6 +62,7 @@ int allocate_frame(int process_id, int virtual_page_number, int *dirty_swap){
         // TODO set dirty_swap to 1 if a dirty page is swapped out
         // TODO ignore dirty_swap if it's NULL
         // TODO don't swap out the page table frames
+        printf("allocate_frame: No free frames available, swapping not implemented yet\n");
         return 0; // temp for now
     }
     memory[frame_number].process_id = process_id;
