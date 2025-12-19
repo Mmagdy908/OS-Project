@@ -1,12 +1,13 @@
 build:
 	gcc process_generator.c -o process_generator.out
 	gcc clk.c -o clk.out
-	gcc scheduler.c -o scheduler.out -lm
+	gcc -c Memory/mmu.c -o Memory/mmu.o -I.
+	gcc scheduler.c Memory/mmu.o -o scheduler.out -lm
 	gcc process.c -o process.out
 	gcc test_generator.c -o test_generator.out
 
 clean:
-	rm -f *.out  processes.txt
+	rm -f *.out processes.txt Memory/*.o *.o
 
 all: clean build
 

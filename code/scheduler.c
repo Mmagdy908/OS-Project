@@ -1,9 +1,10 @@
 #include "scheduler_algorithms.h"
-#define MQKEY 500   // key for message queue
+#include "Memory/mmu.h"
+#define MQKEY 500 // key for message queue
 
 enum Schedulers
 {
-    HPF=1,
+    HPF = 1,
     SRTN,
     RR
 };
@@ -11,41 +12,46 @@ enum Schedulers
 int noArrivingProcesses = 0;
 int msgq_id;
 
-void setNoArrivingProcessesFlag(int signum){
-    noArrivingProcesses=1;
+void setNoArrivingProcessesFlag(int signum)
+{
+    noArrivingProcesses = 1;
 }
 
-void clearResources(int signum){
+void clearResources(int signum)
+{
     destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
     exit(0);
 }
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-    signal(SIGINT,clearResources);
+    signal(SIGINT, clearResources);
     // signal(SIGTERM,clearResources);
 
-    signal(SIGUSR1,setNoArrivingProcessesFlag);
+    signal(SIGUSR1, setNoArrivingProcessesFlag);
 
     // reading arguments
     int schedulerType = atoi(argv[1]);
-    int quantum=0;
-    if(schedulerType==RR){
+    int quantum = 0;
+    if (schedulerType == RR)
+    {
         quantum = atoi(argv[2]);
     }
 
-    int agingInterval=0;
-    if(schedulerType==HPF){
-        agingInterval=atoi(argv[3]);
+    int agingInterval = 0;
+    if (schedulerType == HPF)
+    {
+        agingInterval = atoi(argv[3]);
     }
 
     initClk();
-    
-    //TODO implement the scheduler :)
-    // Initialize message queue
-    // int  msgq_id;
-    msgq_id = msgget(MQKEY, 0666 | IPC_CREAT); //create message queue and return id
+    init_MMU();
+
+    // TODO implement the scheduler :)
+    //  Initialize message queue
+    //  int  msgq_id;
+    msgq_id = msgget(MQKEY, 0666 | IPC_CREAT); // create message queue and return id
     if (msgq_id == -1)
     {
         perror("Error in creating message queue in scheduler");
@@ -54,28 +60,30 @@ int main(int argc, char * argv[])
 
     SchedulerStats stats;
 
-    switch(schedulerType){
-        case RR:
-            stats=RoundRobin(quantum, msgq_id, &noArrivingProcesses);
-            break;
-        case HPF:
-            stats=HighestPriorityFirst(agingInterval, msgq_id, &noArrivingProcesses);
-            break;
-        case SRTN:
-            stats=ShortestRemainingTimeNext(msgq_id,&noArrivingProcesses);
-            break;
+    switch (schedulerType)
+    {
+    case RR:
+        stats = RoundRobin(quantum, msgq_id, &noArrivingProcesses);
+        break;
+    case HPF:
+        stats = HighestPriorityFirst(agingInterval, msgq_id, &noArrivingProcesses);
+        break;
+    case SRTN:
+        stats = ShortestRemainingTimeNext(msgq_id, &noArrivingProcesses);
+        break;
     }
 
     // output scheduler.perf
-    FILE* perf_file = open_file("scheduler.perf", 0);
+    FILE *perf_file = open_file("scheduler.perf", 0);
     add_performance(perf_file, &stats, getClk());
     close_file(perf_file);
+    clear_MMU_resources();
 
     // release message queue
     // msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
 
-    //upon termination release the clock resources.
+    // upon termination release the clock resources.
     destroyClk(false);
-    
+
     return 0;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <sys/types.h>
+#include <string.h>
 
 // Forward declaration
 struct Queue;
@@ -7,38 +8,56 @@ typedef struct Queue Queue;
 
 #include "./queue.h"
 
-
-typedef enum {
+// Updated Process State with separate blocking states
+typedef enum
+{
     READY,
     RUNNING,
-    BLOCKED,
+    BLOCKED_DEPENDENCY, // Waiting on dependency
+    BLOCKED_PAGE_FAULT, // Waiting on I/O for page fault
 } ProcessState;
 
-typedef struct PCB{
+typedef struct MemoryRequest
+{
+    int time;    // Relative time when request occurs
+    int address; // Virtual address to access
+    int write;   // 0 for read, 1 for write
+} MemoryRequest;
+
+typedef struct PCB
+{
     int id;
-    int dependencyId;         // ID of process it depends on (-1 if none)
+    int dependencyId;
     int arrivaltime;
-    int executiontime;      // original runtime
+    int executiontime;
     int remainingtime;
     int waitingtime;
-    int priority;           // 0-10, lower is higher priority
-    ProcessState state;             
-    int starttime;          // first time process ran (-1 if never started)
+    int priority;
+    ProcessState state;
+    int starttime;
     int resumedAt;
-    int lastActive;        // last time process was active
-    int readyFrom;         // time when process entered ready state
+    int lastActive;
+    int readyFrom;
     int finishtime;
-    int disk_base;
-    int disk_limit;
-    int page_table_frame;
-    float turnaround;       // finishtime - arrivaltime
-    float wturnaround;      // turnaround / executiontime
-    pid_t pid;              // actual process ID after fork
-    Queue* dependents;    // queue of PCB* that depend on this process
+    int disk_base;        // Base page on disk
+    int disk_limit;       // Number of pages needed
+    int page_table_frame; // Physical frame holding page table
+
+    // Memory management fields
+    MemoryRequest *memory_requests; // Array of memory requests
+    int num_requests;               // Number of memory requests
+    int current_request_index;      // Next request to process
+    int blocked_until;              // Time when process can resume after page fault
+
+    float turnaround;
+    float wturnaround;
+    pid_t pid;
+    Queue *dependents;
 } PCB;
 
-PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId, int disk_base, int disk_limit) {
-    PCB* pcb = (PCB*)malloc(sizeof(PCB));
+PCB *pcb_create(int id, int arrival, int runtime, int priority, int dependencyId, int disk_base, int disk_limit)
+{
+    PCB *pcb = (PCB *)malloc(sizeof(PCB));
     pcb->id = id;
     pcb->dependencyId = dependencyId;
     pcb->arrivaltime = arrival;
@@ -46,9 +65,9 @@ PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId
     pcb->remainingtime = runtime;
     pcb->waitingtime = 0;
     pcb->priority = priority;
-    pcb->state = READY;  // starts in ready/waiting state
+    pcb->state = READY;
     pcb->starttime = -1;
-    pcb->lastActive = -1; 
+    pcb->lastActive = -1;
     pcb->finishtime = -1;
     pcb->turnaround = 0;
     pcb->wturnaround = 0;
@@ -56,13 +75,27 @@ PCB* pcb_create(int id, int arrival, int runtime, int priority, int dependencyId
     pcb->disk_base = disk_base;
     pcb->disk_limit = disk_limit;
     pcb->page_table_frame = -1;
+
+    // Initialize memory management fields
+    pcb->memory_requests = NULL;
+    pcb->num_requests = 0;
+    pcb->current_request_index = 0;
+    pcb->blocked_until = 0;
+
     pcb->dependents = queue_create();
     return pcb;
 }
 
-void pcb_clear(PCB* pcb) {
-    if(pcb->dependents)
+void pcb_clear(PCB *pcb)
+{
+    if (pcb->dependents)
         queue_clear(pcb->dependents);
-    // free(pcb->dependents);
+
+    if (pcb->memory_requests)
+    {
+        free(pcb->memory_requests);
+        pcb->memory_requests = NULL;
+    }
+
     free(pcb);
 }
