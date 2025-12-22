@@ -79,7 +79,7 @@ void free_frame(int frame_number)
     {
         int virtual_page_number = memory[frame_number].virtual_page_number;
 
-        // check for valid virtual_page_number
+        // check for valid virtual_page_number(in case of page table frame)
         if (virtual_page_number >= 0 && virtual_page_number < PAGE_TABLE_SIZE)
             page_table[virtual_page_number].valid = 0;
     }
@@ -184,7 +184,7 @@ int MMU_request(int process_id, int virtual_page_number, int write)
     else
     {
         // Page fault 
-          fprintf(memory_log, "PageFault upon VA %d  from process  %d \n",virtual_page_number, process_id);
+        fprintf(memory_log, "PageFault upon VA %d  from process  %d \n",virtual_page_number, process_id);
 
         int dirty_swap = 0;
         int frame_number = allocate_frame(process_id, virtual_page_number, &dirty_swap);
@@ -193,11 +193,11 @@ int MMU_request(int process_id, int virtual_page_number, int write)
         page_table[virtual_page_number].valid = 1;
         memory[frame_number].dirty = write ? 1 : 0;
 
-        //
-            fprintf(memory_log, "At time %d page %d for process %d is loaded into memory page %d.  \n",
-            getClk(), virtual_page_number, process_id, frame_number);
+        
+        fprintf(memory_log, "At time %d page %d for process %d is loaded into memory page %d.  \n",
+        getClk(), virtual_page_number, process_id, frame_number);
 
-            fflush(memory_log);
+        fflush(memory_log);
 
         return dirty_swap ? 20 : 10; // Return blocking time
     }
@@ -229,6 +229,10 @@ void clear_MMU_resources()
     PT_list_clear(page_tables_list);
     close_memory_log();
 }
+
+// ==========================================
+// TEST SUITE
+// ==========================================
 
 void print_test_header(const char *name)
 {
