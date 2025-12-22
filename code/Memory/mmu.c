@@ -162,7 +162,7 @@ void release_process_frames(int process_id)
     }
 }
 
-int MMU_request(int process_id, int virtual_page_number, int write)
+int MMU_request(int process_id, int virtual_page_number, int write, int currentTime)
 {
     PTE *page_table = PT_list_find(page_tables_list, process_id);
     if (!page_table)
@@ -195,7 +195,7 @@ int MMU_request(int process_id, int virtual_page_number, int write)
 
         
         fprintf(memory_log, "At time %d page %d for process %d is loaded into memory page %d.  \n",
-        getClk(), virtual_page_number, process_id, frame_number);
+        currentTime, virtual_page_number, process_id, frame_number);
 
         fflush(memory_log);
 

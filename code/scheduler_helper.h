@@ -78,7 +78,7 @@ int process_memory_requests(PCB *pcb, int current_time)
 
         MemoryRequest *req = &pcb->memory_requests[pcb->current_request_index];
 
-        int block_cycles = MMU_request(pcb->id, req->address, req->write);
+        int block_cycles = MMU_request(pcb->id, req->address, req->write, getClk());
 
         if (block_cycles > 0)
         {
@@ -138,7 +138,7 @@ PCB *add_new_process(LinkedList *processList, SchedulerStats *stats, msgbuff mes
     list_add_front(processList, pcb);
 
     pcb->page_table_frame = setup_page_table(pcb->id); //
-    MMU_request(pcb->id, 0, 0);
+    MMU_request(pcb->id, 0, 0, getClk());
 
     load_memory_requests(pcb);
 
