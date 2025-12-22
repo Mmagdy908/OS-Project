@@ -2,9 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../DS/PT.h"
+#include <stdio.h>
+#include "headers.h"
+
 
 #define PAGE_TABLE_SIZE 64
 #define MEMORY_SIZE 32
+
+static FILE *memory_log = NULL;
 
 PTLinkedList *page_tables_list = NULL;
 MemoryFrame memory[MEMORY_SIZE];
@@ -25,7 +30,25 @@ void init_MMU()
         memory[i].dirty = 0;
         free_frames_stack[++stack_top] = i;
     }
+
+    memory_log = fopen("memory.log", "w");
+    if (!memory_log)
+    {
+        perror("Error opening memory.log");
+        exit(1);
+    }
+
 }
+
+void close_memory_log()
+{
+    if (memory_log)
+    {
+        fclose(memory_log);
+        memory_log = NULL;
+    }
+}
+
 
 int get_free_frame()
 {
@@ -79,6 +102,9 @@ int allocate_frame(int process_id, int virtual_page_number, int *dirty_swap)
         memory[frame_number].reference = 1;
         memory[frame_number].virtual_page_number = virtual_page_number;
         memory[frame_number].dirty = 0;
+
+        fprintf(memory_log, "Free Physical page  %d  allocated  \n", frame_number);
+
         return frame_number;
     }
 
@@ -99,6 +125,7 @@ int allocate_frame(int process_id, int virtual_page_number, int *dirty_swap)
         else
         {
             int victim_frame = clock_hand;
+            fprintf(memory_log, "Swapping out page  %d  to disk  \n", victim_frame);
             if (memory[victim_frame].dirty && dirty_swap)
             {
                 *dirty_swap = 1;
@@ -156,12 +183,22 @@ int MMU_request(int process_id, int virtual_page_number, int write)
     }
     else
     {
+        // Page fault 
+          fprintf(memory_log, "PageFault upon VA %d  from process  %d \n",virtual_page_number, process_id);
+
         int dirty_swap = 0;
         int frame_number = allocate_frame(process_id, virtual_page_number, &dirty_swap);
 
         page_table[virtual_page_number].frame_number = frame_number;
         page_table[virtual_page_number].valid = 1;
         memory[frame_number].dirty = write ? 1 : 0;
+
+        //
+            fprintf(memory_log, "At time %d page %d for process %d is loaded into memory page %d.  \n",
+            getClk(), virtual_page_number, process_id, frame_number);
+
+            fflush(memory_log);
+
         return dirty_swap ? 20 : 10; // Return blocking time
     }
 }
@@ -190,6 +227,7 @@ int setup_page_table(int process_id)
 void clear_MMU_resources()
 {
     PT_list_clear(page_tables_list);
+    close_memory_log();
 }
 
 void print_test_header(const char *name)

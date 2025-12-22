@@ -138,6 +138,7 @@ PCB *add_new_process(LinkedList *processList, SchedulerStats *stats, msgbuff mes
     list_add_front(processList, pcb);
 
     pcb->page_table_frame = setup_page_table(pcb->id); //
+    MMU_request(pcb->id, 0, 0);
 
     load_memory_requests(pcb);
 
