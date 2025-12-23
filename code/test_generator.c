@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
 
         char filePath[50];
         
-        sprintf(filePath, "process-%d-requests.txt", i + 1);
+        sprintf(filePath, "process_%d_requests.txt", i + 1);
         
         FILE* rFile=fopen(filePath, "w");
         fprintf(rFile, "%-10s %-20s %-10s\n",

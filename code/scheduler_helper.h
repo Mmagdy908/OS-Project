@@ -5,6 +5,19 @@
 #include "output_helper.h"
 #include "Memory/mmu.h"
 
+int binaryToDecimal(long long binaryNumber) {
+    int decimal = 0, base = 1, remainder;
+   
+    while (binaryNumber != 0) {
+        remainder = binaryNumber % 10; 
+        binaryNumber /= 10;            
+        decimal += remainder * base; 
+        base *= 2;                    
+    }
+
+    return decimal;
+}
+
 // Load memory requests from per-process file
 void load_memory_requests(PCB *pcb)
 {
@@ -52,7 +65,7 @@ void load_memory_requests(PCB *pcb)
         if (sscanf(line, "%d %d %c", &time, &address, &rw) == 3)
         {
             pcb->memory_requests[index].time = time;
-            pcb->memory_requests[index].address = address;
+            pcb->memory_requests[index].address = binaryToDecimal(address/10000);
             pcb->memory_requests[index].write = (rw == 'w' || rw == 'W') ? 1 : 0;
             index++;
         }
