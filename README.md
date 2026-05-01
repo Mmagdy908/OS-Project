@@ -1,7 +1,3 @@
-# Operating System Project Final Report
-
-# Team 3
-
 ## 1. Introduction
 
 This project simulates the core functions of an Operating System: **Scheduling** (deciding which
@@ -24,6 +20,7 @@ We simulate a small, constrained computer system to demonstrate OS concepts clea
 ## 3. System Architecture (Block Diagram)
 
 The system is built from communicating modules that act like hardware and kernel components.
+![system architecure](./system-arch)
 
 **Component Roles**
 
