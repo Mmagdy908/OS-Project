@@ -17,10 +17,9 @@ We simulate a small, constrained computer system to demonstrate OS concepts clea
     access.
 
 
-## 3. System Architecture (Block Diagram)
+## 3. System Architecture
 
 The system is built from communicating modules that act like hardware and kernel components.
-![system architecure](./system-arch)
 
 **Component Roles**
 
